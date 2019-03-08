@@ -7,7 +7,6 @@ def NextLevel(id_parent):
             fr = parent.friends
             for j in range(len(fr)):
                 steamid_son.append(fr[j].id)
-                j = j+1
         except:
             continue
     return steamid_son
