@@ -1,8 +1,10 @@
 import steamapi
+import pandas as pd
 
-def steam_search(steam_id_set, search_id_list):
+def steam_search(steam_id_set, search_id_list, id_file_name, num_result):  
     count = 0
-    while count < 1500:
+    # The result set may be larger than num_result because the earch of one id has to be completed
+    while count < num_result:
         # The first element in the search list is read and DELETED. see python "pop"
         parent = steamapi.user.SteamUser(search_id_list.pop(0))
 
@@ -13,13 +15,31 @@ def steam_search(steam_id_set, search_id_list):
                     count += 1
                     steam_id_set.add(fr[j].id)
                     search_id_list.append(fr[j].id)
+            
+                    # game infomation can be added here
                     
-            if count%1000 == 0:
-                print(count, "new results have been found")
+                    if count%1000 == 0:
+                        print(count, "new results have been found")
         except:
             continue
+    
+    # If result from previous search exist, read it, otherwise create a new one
+    try:
+        id_data = pd.read_csv(id_file_name+".csv")
+    except:
+        id_data = pd.DataFrame(columns=['id'])
+    
+    # write search_id_list to a csv file
+    id_search_data = pd.DataFrame(list(search_id_list), columns=['id'])
+    id_search_data.to_csv(id_file_name + "_search.csv", index=False)
+
+    # write steam_id_set to a csv file
+    # can this be done without a new copy?
+    new_id_data = pd.DataFrame(list(steam_id_set), columns=['id'])
+    id_data = id_data.append(new_id_data)
+    id_data.to_csv(id_file_name+".csv", index=False)
             
-            # game infomation can be added here
+            
 
 
 
@@ -28,13 +48,24 @@ if __name__ == "__main__":
     steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate_key=True)
     root = steamapi.user.SteamUser(userurl="kane2019")
 
-    # The following two variable can later also be imported from a csv file
+    # parameters
+    id_file_name = "test" # The file name where the data will be stored
+    num_result = 50 # The approxmated number of result of result in this search
 
-    # steam_id_set saves the result id, this is a set object, which is not ordered 
-    # but elements can be efficiently searched. No duplication can exist in a set.
-    steam_id_set = {root.id}
-    # steam_id_list saves the id that whose friends remain to be searched. It is a list object.
-    search_id_list = [root.id]
+    # The following two variable can later also be imported from a csv file:
+    #
+    # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
+    #               but elements can be efficiently searched. No duplication can exist in a set.
+    # search_id_list: search_id_list saves the id that whose friends remain to be searched. It is a list object.
+    #               All elements in this list already exists in steam_id_set
 
-    steam_search(steam_id_set, search_id_list)
+    # If the data exist, read the existing steam_id_set data, otherwise create one with the root id
+    try:      
+        id_search_data = pd.read_csv(id_file_name+"_search.csv")
+        search_id_list = id_search_data["id"].tolist()
+        steam_id_set = set()
+    except:
+        steam_id_set = {root.id}
+        search_id_list = [root.id]
+    steam_search(steam_id_set, search_id_list, id_file_name, num_result)
     
