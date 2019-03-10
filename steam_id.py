@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # search_id_list: search_id_list saves the id that whose friends remain to be searched. It is a list object.
     #               All elements in this list already exists in steam_id_set
 
-    # If the data exist, read the existing steam_id_set data, otherwise create one with the root id
+    # If the data exist, read the existing search_id_list data, otherwise create one with the root id
     try:      
         id_search_data = pd.read_csv(id_file_name+"_search.csv")
         search_id_list = id_search_data["id"].tolist()
