@@ -1,3 +1,7 @@
+import steamapi
+steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate_key=True)
+steamapi.user.SteamUser(userurl="kane2019")
+me = steamapi.user.SteamUser(userurl="kane2019")
 def NextLevel(idp, id_parent):
     steamid_son = []
     for i in range(len(id_parent)):
