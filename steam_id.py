@@ -1,29 +1,40 @@
 import steamapi
-steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate_key=True)
-steamapi.user.SteamUser(userurl="kane2019")
-me = steamapi.user.SteamUser(userurl="kane2019")
-def NextLevel(idp, id_parent):
-    steamid_son = []
-    for i in range(len(id_parent)):
-        parent = steamapi.user.SteamUser(id_parent[i])
-        try:
+
+def steam_search(steam_id_set, search_id_list):
+    count = 0
+    while count < 1500:
+        # The first element in the search list is read and DELETED. see python "pop"
+        parent = steamapi.user.SteamUser(search_id_list.pop(0))
+
+        try: # In case friends is not opened
             fr = parent.friends
-            n=len(idp)
             for j in range(len(fr)):
-                ind = 0
-                for k in range(n):
-                    if fr[j].id == idp[k]:
-                        ind = ind+1
-                if ind == 0:
-                    steamid_son.append(fr[j].id)
-                    idp.append(fr[j].id)
+                if fr[j] not in steam_id_set:
+                    count += 1
+                    steam_id_set.add(fr[j].id)
+                    search_id_list.append(fr[j].id)
+                    
+            if count%1000 == 0:
+                print(count, "new results have been found")
         except:
             continue
-    return [steamid_son, idp]
-def main():
-    steam_id = [[me.id]]
-    idp = [me.id]
-    for i_o in range(3):
-        ex = NextLevel(idp, steam_id[i_o])
-        idp = ex[1]
-        steam_id.append(ex[0])
+            
+            # game infomation can be added here
+
+
+
+if __name__ == "__main__":
+    # This seciton will not run if the py script is imported by another
+    steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate_key=True)
+    root = steamapi.user.SteamUser(userurl="kane2019")
+
+    # The following two variable can later also be imported from a csv file
+
+    # steam_id_set saves the result id, this is a set object, which is not ordered 
+    # but elements can be efficiently searched. No duplication can exist in a set.
+    steam_id_set = {root.id}
+    # steam_id_list saves the id that whose friends remain to be searched. It is a list object.
+    search_id_list = [root.id]
+
+    steam_search(steam_id_set, search_id_list)
+    
