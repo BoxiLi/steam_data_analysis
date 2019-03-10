@@ -13,10 +13,9 @@ def steam_search(steam_id_set, search_id_list):
                     count += 1
                     steam_id_set.add(fr[j].id)
                     search_id_list.append(fr[j].id)
-
+                    
             if count%1000 == 0:
                 print(count, "new results have been found")
-
         except:
             continue
             
@@ -26,17 +25,16 @@ def steam_search(steam_id_set, search_id_list):
 
 if __name__ == "__main__":
     # This seciton will not run if the py script is imported by another
+    steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate_key=True)
+    root = steamapi.user.SteamUser(userurl="kane2019")
 
-    # The root ID
-    root_id = "6B61866E0CAEBE0BE9804CAAB54502E9"
-    
     # The following two variable can later also be imported from a csv file
 
     # steam_id_set saves the result id, this is a set object, which is not ordered 
     # but elements can be efficiently searched. No duplication can exist in a set.
-    steam_id_set = {root_id}
+    steam_id_set = {root.id}
     # steam_id_list saves the id that whose friends remain to be searched. It is a list object.
-    search_id_list = [root_id]
+    search_id_list = [root.id]
 
     steam_search(steam_id_set, search_id_list)
     
