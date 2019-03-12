@@ -11,16 +11,16 @@ def steam_search(steam_id_set, search_id_list, id_file_name, num_result):
         try: # In case friends is not opened
             fr = parent.friends
             for j in range(len(fr)):
-                if fr[j] not in steam_id_set:
-                    count += 1
+                if fr[j].id not in steam_id_set:
                     steam_id_set.add(fr[j].id)
                     search_id_list.append(fr[j].id)
             
                     # game infomation can be added here
-                    
+
+                    count += 1
                     if count%1000 == 0:
                         print(count, "new results have been found")
-        except:
+        except steamapi.errors.APIUnauthorized as e:
             continue
     
     # write search_id_list to a csv file
@@ -32,7 +32,7 @@ def steam_search(steam_id_set, search_id_list, id_file_name, num_result):
     id_data = pd.DataFrame(list(steam_id_set), columns=['id'])
     id_data.to_csv(id_file_name+".csv", index=False)
             
-            
+
 
 
 # This seciton will not run if the py script is imported by another
@@ -40,7 +40,7 @@ steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate
 root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
-id_file_name = "test" # The file name where the data will be stored
+id_file_name = "test2" # The file name where the data will be stored
 num_result = 50000 # The approxmated number of result of result in this search
 
 # Important variables:
