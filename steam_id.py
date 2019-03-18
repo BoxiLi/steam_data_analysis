@@ -1,5 +1,7 @@
 import steamapi
 import pandas as pd
+import csv
+import json
 
 def steam_search(steam_id_set, search_id_list, id_file_name, num_result):  
     count = 0
@@ -24,8 +26,9 @@ def steam_search(steam_id_set, search_id_list, id_file_name, num_result):
             continue
     
     # write search_id_list to a csv file
-    id_search_data = pd.DataFrame(list(search_id_list), columns=['id'])
-    id_search_data.to_csv(id_file_name + "_search.csv", index=False)
+    with open(id_file_name + "_search.csv", "w") as f:
+        writer = csv.writer(f, delimiter ="\n")
+        writer.writerow(search_id_list)
 
     # write steam_id_set to a csv file
     # can this be done without a new copy?
@@ -40,8 +43,8 @@ steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate
 root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
-id_file_name = "test2" # The file name where the data will be stored
-num_result = 50000 # The approxmated number of result of result in this search
+id_file_name = "test" # The file name where the data will be stored
+num_result = 50 # The approxmated number of result of result in this search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
@@ -50,9 +53,15 @@ num_result = 50000 # The approxmated number of result of result in this search
 #               All elements in this list already exists in steam_id_set
 
 # If the data exist, read the existing search_id_list data, otherwise create one with the root id
-try:      
-    id_search_data = pd.read_csv(id_file_name + "_search.csv")
-    search_id_list = id_search_data["id"].tolist()
+try: 
+    search_id_list = []     
+    with open(id_file_name + "_search.csv", 'r') as f:
+        reader = csv.reader(f, delimiter= "\n")
+        try:
+            for row in reader:
+                search_id_list.append(int(row[0]))
+        except IndexError:
+            pass
     id_data = pd.read_csv(id_file_name + ".csv")
     steam_id_set = set(id_data["id"].tolist())
 
