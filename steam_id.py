@@ -36,7 +36,7 @@ def steam_search(steam_id_set, search_id_list, id_file_name, num_result):
 
 def steam_info(steam_id_set, steam_info_data, id_file_name):
     """
-    This function take a set of steam id and call steamapi to get the detailed information
+    This function takes a set of steam ids and call steamapi to get the detailed information
     of them. The result is saved in a dicationary steam_info_data and in a json file.
     """
     count = 0
@@ -47,18 +47,24 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
 
         # Call the required information
         user = steamapi.user.SteamUser(id)
+        # If the user information is not accessable, return empty data. We would like it's 
+        # key to remain in steam_info_data to prevent searching it again in the future.
         try:
             friends = [friend.id for friend in user.friends]
+        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+            friends = [] 
+        try:
             games = [game.id for game in user.games] # we save only the integer id
+        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+            games = []
+        try:
             date = user.time_created
             time_created = (date.year, date.month, date.day)
+        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+            time_created = None
+        try:
             level = user.level
         except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
-            # If the user information is not accessable, return empty data. We would like it's 
-            # key to remain in steam_info_data to prevent searching it again in the future.
-            friends = [] 
-            games = []
-            time_created = None
             level = None
         
 
