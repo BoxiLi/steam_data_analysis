@@ -51,20 +51,26 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
         # key to remain in steam_info_data to prevent searching it again in the future.
         try:
             friends = [friend.id for friend in user.friends]
-        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+        except steamapi.errors.APIUnauthorized:
+            friends = []
+            games = []
+            time_created = None
+            level = None
+            continue
+        except steamapi.errors.AccessException:
             friends = [] 
         try:
             games = [game.id for game in user.games] # we save only the integer id
-        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+        except steamapi.errors.AccessException:
             games = []
         try:
             date = user.time_created
             time_created = (date.year, date.month, date.day)
-        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+        except steamapi.errors.AccessException:
             time_created = None
         try:
             level = user.level
-        except (steamapi.errors.APIUnauthorized, steamapi.errors.AccessException):
+        except steamapi.errors.AccessException:
             level = None
         
 
@@ -83,14 +89,56 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
         json.dump(steam_info_data, f)
 
 
+def load_data(id_file_name):
+    """
+    If the data exist, read the existing search_id_list data, otherwise create one with the root id
+    """
+    try: 
+        search_id_list = []     
+        with open(id_file_name + "_search.csv", 'r') as f:
+            reader = csv.reader(f, delimiter= '\n')
+            for row in reader:
+                try:
+                    search_id_list.append(int(row[0]))
+                except IndexError:
+                    pass
+        print("search_id_list is loaded from file")
+    except FileNotFoundError:
+        search_id_list = [root.id]
+        print("search_id_list not found, a new one is created")
+
+    try: 
+        steam_id_set = set()
+        with open(id_file_name + ".csv", 'r') as f:
+            reader = csv.reader(f, delimiter = '\n')
+            for row in reader:
+                try:
+                    steam_id_set.add(int(row[0]))
+                except IndexError:
+                    pass
+        print("steam_id_set is loaded from file")
+    except FileNotFoundError:
+        steam_id_set = {root.id}
+        print("steam_id_set not found, a new one is created")
+
+    try: 
+        json_data = open(id_file_name + ".json").read()
+        steam_info_data = json.loads(json_data)
+        print("steam_info_data is loaded from file")
+    except FileNotFoundError:
+        steam_info_data = {}
+        print("steam_info_data  not found, a new one is created")
+
+    return steam_id_set, search_id_list, steam_info_data
+
 
 # This seciton will not run if the py script is imported by another
 steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate_key=True)
 root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
-id_file_name = "test" # The file name where the data will be stored
-num_result = 5 # The approxmated number of result of result in this search
+id_file_name = "test1" # The file name where the data will be stored
+num_result = 277 # The approxmated number of result of result in this search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
@@ -106,34 +154,7 @@ num_result = 5 # The approxmated number of result of result in this search
 #               CAREFUL: JSON only allow string to be the keys, thus the keys are always str(id) instead of an integer!
 #
 
-# If the data exist, read the existing search_id_list data, otherwise create one with the root id
-try: 
-    search_id_list = []     
-    with open(id_file_name + "_search.csv", 'r') as f:
-        reader = csv.reader(f, delimiter= '\n')
-        for row in reader:
-            try:
-                search_id_list.append(int(row[0]))
-            except IndexError:
-                pass
-
-    steam_id_set = set()
-    with open(id_file_name + ".csv", 'r') as f:
-        reader = csv.reader(f, delimiter = '\n')
-
-        for row in reader:
-            try:
-                steam_id_set.add(int(row[0]))
-            except IndexError:
-                pass
-
-    json_data = open(id_file_name + ".json").read()
-    steam_info_data = json.loads(json_data)
-
-except FileNotFoundError:
-    steam_id_set = {root.id}
-    search_id_list = [root.id]
-    steam_info_data = {}
+steam_id_set, search_id_list, steam_info_data = load_data(id_file_name)
 
 steam_search(steam_id_set, search_id_list, id_file_name, num_result)
 
