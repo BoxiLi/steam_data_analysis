@@ -1,6 +1,8 @@
 import steamapi
 import csv
 import json
+import time
+
 
 def steam_search(steam_id_set, search_id_list, id_file_name, num_result):  
     count = 0
@@ -47,6 +49,7 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
 
         # Call the required information
         user = steamapi.user.SteamUser(id)
+        profile_open = True
         # If the user information is not accessable, return empty data. We would like it's 
         # key to remain in steam_info_data to prevent searching it again in the future.
         try:
@@ -56,22 +59,24 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
             games = []
             time_created = None
             level = None
-            continue
+            profile_open = False
         except steamapi.errors.AccessException:
             friends = [] 
-        try:
-            games = [game.id for game in user.games] # we save only the integer id
-        except steamapi.errors.AccessException:
-            games = []
-        try:
-            date = user.time_created
-            time_created = (date.year, date.month, date.day)
-        except steamapi.errors.AccessException:
-            time_created = None
-        try:
-            level = user.level
-        except steamapi.errors.AccessException:
-            level = None
+
+        if profile_open: # The steam api has a bug that if API is not open, user.time_created does not exists
+            try:
+                games = [(game.id) for game in user.games]
+            except steamapi.errors.AccessException:
+                games = []
+            try:
+                date = user.time_created
+                time_created = (date.year, date.month, date.day)
+            except steamapi.errors.AccessException:
+                time_created = None
+            try:
+                level = user.level
+            except steamapi.errors.AccessException:
+                level = None
         
 
         steam_info_data[id] = {"games":games, "friends":friends, "time_created":time_created,
@@ -79,10 +84,12 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
 
         # Saving during the process to prevent losing data
         count += 1
-        if count%100 == 0:
-            print(count, "IDs have been searched and saved")
+        if count%500 == 0:
+            print(count, "IDs have been searched and saved, total", len(steam_info_data)) 
             with open(id_file_name + '.json', 'w') as f:
                 json.dump(steam_info_data, f)
+            if count%500 == 0:
+                time.sleep(300)
 
     # Saving all the data
     with open(id_file_name + '.json', 'w') as f:
@@ -127,7 +134,7 @@ def load_data(id_file_name):
         print("steam_info_data is loaded from file")
     except FileNotFoundError:
         steam_info_data = {}
-        print("steam_info_data  not found, a new one is created")
+        print("steam_info_data not found, a new one is created")
 
     return steam_id_set, search_id_list, steam_info_data
 
@@ -137,8 +144,8 @@ steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate
 root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
-id_file_name = "test1" # The file name where the data will be stored
-num_result = 277 # The approxmated number of result of result in this search
+id_file_name = "steam_data" # The file name where the data will be stored
+num_result = 1 # The approxmated number of result in this round of search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 

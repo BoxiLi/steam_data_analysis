@@ -3,7 +3,7 @@ import json
 import networkx as nx
 import matplotlib.pyplot as plt
 
-id_file_name = "test"
+id_file_name = "steam_data3000"
 
 steam_id_set = set()
 with open(id_file_name + ".csv", 'r') as f:
@@ -16,7 +16,7 @@ with open(id_file_name + ".csv", 'r') as f:
             pass
 
 
-json_data = open(id_file_name + ".json").read()
+json_data = open(id_file_name + ".json").read() 
 steam_info_data = json.loads(json_data)
 
 
@@ -34,11 +34,11 @@ for user in steam_info_data: # careful, user is a str
 # steam_net.remove_nodes_from(list(nx.isolates(steam_net)))
 
 options = {
-     'node_color': 'red',
+     'node_color': 'black',
      'node_size': 5,
      'width': 1,
-     'edge_color' : 'black',
-     'alpha' : 0.5
+     'edge_color' : 'blue',
+     'alpha' : 0.4
 }
 plt.subplot(111)
 nx.draw(steam_net, with_labels=False, **options)
