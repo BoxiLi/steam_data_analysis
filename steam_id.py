@@ -2,6 +2,7 @@ import steamapi
 import csv
 import json
 import time
+import datetime
 
 
 def steam_search(steam_id_set, search_id_list, id_file_name, num_result):  
@@ -50,37 +51,39 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
         # Call the required information
         user = steamapi.user.SteamUser(id)
         profile_open = True
+        new_id_info = {}
         # If the user information is not accessable, return empty data. We would like it's 
         # key to remain in steam_info_data to prevent searching it again in the future.
         try:
-            friends = [friend.id for friend in user.friends]
+            new_id_info["friends"] = [friend.id for friend in user.friends]
         except steamapi.errors.APIUnauthorized:
-            friends = []
-            games = []
-            time_created = None
-            level = None
+            new_id_info["friends"] = []
+            new_id_info["games"] = []
+            new_id_info["time_created"] = None
+            new_id_info["level"] = None
             profile_open = False
         except steamapi.errors.AccessException:
-            friends = [] 
+            new_id_info["friends"] = [] 
 
         if profile_open: # The steam api has a bug that if API is not open, user.time_created does not exists
             try:
-                games = [(game.id) for game in user.games]
+                new_id_info["games"] = user.game_time
             except steamapi.errors.AccessException:
-                games = []
+                new_id_info["games"] = []
+            except: # I don't know why this error is not captured by steamapi
+                print(user.id)
+                new_id_info["games"] = []
             try:
                 date = user.time_created
-                time_created = (date.year, date.month, date.day)
+                new_id_info["time_created"] = (date.year, date.month, date.day)
             except steamapi.errors.AccessException:
-                time_created = None
+                new_id_info["time_created"] = None
             try:
-                level = user.level
+                new_id_info["level"] = user.level
             except steamapi.errors.AccessException:
-                level = None
-        
+                new_id_info["level"] = None
 
-        steam_info_data[id] = {"games":games, "friends":friends, "time_created":time_created,
-            "level":level}
+        steam_info_data[id] = new_id_info
 
         # Saving during the process to prevent losing data
         count += 1
@@ -145,7 +148,7 @@ root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
 id_file_name = "steam_data" # The file name where the data will be stored
-num_result = 1 # The approxmated number of result in this round of search
+num_new_id = 0 # The approxmated number of result in this round of search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
@@ -154,15 +157,25 @@ num_result = 1 # The approxmated number of result in this round of search
 #               All elements in this list already exists in steam_id_set
 # steam_info_data: steam_info_data is a dictionary which uses the str(id) as key and contains information of 
 #               the user. Currently the informaiton includes:
-#               "games": a list of game id (integer)
+#               "games": a list of [game_id,play_time] (integer)
 #               "friends": a list of friends id (integer)
 #               "level"：an integer
 #               "time_created": a tuple containing three integer (year, month, day)
 #               CAREFUL: JSON only allow string to be the keys, thus the keys are always str(id) instead of an integer!
 #
 
-steam_id_set, search_id_list, steam_info_data = load_data(id_file_name)
+while(True):
+    try:
+        steam_id_set, search_id_list, steam_info_data = load_data(id_file_name)
 
-steam_search(steam_id_set, search_id_list, id_file_name, num_result)
+        steam_search(steam_id_set, search_id_list, id_file_name, num_new_id)
 
-steam_info(steam_id_set, steam_info_data, id_file_name)
+        steam_info(steam_id_set, steam_info_data, id_file_name)
+
+        if len(steam_info_data)>30000:
+            break
+    except:
+        print("Connection error at", datetime.datetime.now())
+        time.sleep(500)
+
+
