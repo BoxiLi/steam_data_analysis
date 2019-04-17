@@ -34,6 +34,7 @@ class user_game_matrix(object):
         # go throught all data and record two dictionary {id: num of owned game} and {game: num of perchase}
         if self.played_required:
             print("games with playtime 0 is neglected")
+            print()
         game_stat = {}
         user_stat = {}
         useful_user_num = 0
@@ -162,7 +163,7 @@ def matrix_func(user_list, game_list, mat, useful_matrix_data, game_index_dict):
 file_name = "user_game"
 generator = user_game_matrix(file_name)
 # default of "played_required" is True
-generator.played_required = False
+generator.played_required = True
 generator.thres_game = None
 generator.thres_user = None
 mat, user_list, game_list = generator.construct(matrix_func)
