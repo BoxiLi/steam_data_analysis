@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.sparse as sp
-import csv
 import json
 
 class user_game_matrix(object):
@@ -31,7 +30,7 @@ class user_game_matrix(object):
             user_stat: {user_id: number of owned games}
             game_stat: {game_id: number of perchase}
         """
-        # go throught all data and record two dictionary {id: num of owned game} and {game: num of perchase}
+        # go throught all data and record two dictionaries
         if self.played_required:
             print("games with playtime 0 is neglected")
         game_stat = {}
@@ -52,7 +51,6 @@ class user_game_matrix(object):
             if owned_game_num > 0:
                 useful_user_num +=1
                 user_stat[id] = owned_game_num
-
 
         # print statistics
         perchase_num_list = list(game_stat.values())
@@ -98,14 +96,14 @@ class user_game_matrix(object):
         self.game_list = [game for game, num in game_stat.items() if num >= self.thres_game]
 
         # create useful matrix data with 
-        useful_game_set = set(self.game_list)
+        game_index_dict = {game: index for index, game in enumerate(self.game_list)}
         useful_matrix_data = []
         for id in self.user_list:
             game_data =  self.user_game_data[id]
             if self.played_required:
-                new_game_data = [(game, time) for game, time in game_data if time > 0 and game in useful_game_set]
+                new_game_data = [(game_index_dict[game], time) for game, time in game_data if time > 0 and game in game_index_dict]
             else:
-                new_game_data = [(game, time) for game, time in game_data if game in useful_game_set]
+                new_game_data = [(game_index_dict[game], time) for game, time in game_data if game in game_index_dict]
             useful_matrix_data.append(new_game_data)
             # It can happen that the filtered user has lesser than thresold number of games because some of games was deleted
             # But we make sure that all games have enough user because this number is smaller
@@ -121,12 +119,11 @@ class user_game_matrix(object):
         """
         create the desired matrix with "matrix_func"
         """
-        game_index_dict = {game: index for index, game in enumerate(self.game_list)}
         num_users = len(self.user_list)
         num_games = len(self.game_list)
         # construct matrix
         mat = sp.lil_matrix((num_users, num_games), dtype = np.float64)
-        matrix_func(self.user_list, self.game_list, mat, useful_matrix_data, game_index_dict)
+        matrix_func(mat, useful_matrix_data)
 
         assert(mat.shape == (len(self.user_list), len(self.game_list)))
         return mat.tocsr(), self.user_list, self.game_list
@@ -144,25 +141,28 @@ class user_game_matrix(object):
         return self.create_matrix(useful_matrix_data)
 
 
-def matrix_func(user_list, game_list, mat, useful_matrix_data, game_index_dict):
+def matrix_func(mat, useful_matrix_data):
     """
     This function determines how the matrix element is calculated from the game time.
     Input:
-        user_list: a list of user id
-        game_list: a list of game id
-        mat: scipy lil-sparse matrix of the shape (total_num_user, total_num_game)
-        game_index_dict: a dictionary {game_id: index of the matrix column}
+        mat: empty scipy lil-sparse matrix of the shape (total_num_user, total_num_game)
+        useful_matrix_data: in the form of  [   [(game_index, time), (game_index, time), (game_index, time),..]      (for id 1)
+                                                [(game_index, time), (game_index, time)]                              (for id 2)
+                                                [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
+                                                ...]
+                            each line corrspods to the game of one id, length can be different
+
     """
-    for id_index in range(len(user_list)):
+    for id_index in range(mat.shape[0]):
         game_data = useful_matrix_data[id_index]
-        for game, time in game_data:
-            mat[id_index, game_index_dict[game]] = time
+        for game_index, time in game_data:
+            mat[id_index, game_index] = time
         
 
-file_name = "user_game"
+file_name = "user_game30000"
 generator = user_game_matrix(file_name)
 # default of "played_required" is True
-generator.played_required = False
+generator.played_required = True
 generator.thres_game = None
 generator.thres_user = None
 mat, user_list, game_list = generator.construct(matrix_func)
