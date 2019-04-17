@@ -151,7 +151,6 @@ def matrix_func(mat, useful_matrix_data):
                                                 [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
                                                 ...]
                             each line corrspods to the game of one id, length can be different
-
     """
     for id_index in range(mat.shape[0]):
         game_data = useful_matrix_data[id_index]
@@ -166,3 +165,7 @@ generator.played_required = True
 generator.thres_game = None
 generator.thres_user = None
 mat, user_list, game_list = generator.construct(matrix_func)
+"""
+Warning, the matrix is in sp.csr form, row slicing is fast but column slicing is very slow, O(nm). 
+Using mat.to_csc() if column operation is more required.
+"""
