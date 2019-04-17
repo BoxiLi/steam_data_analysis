@@ -128,7 +128,7 @@ def game_info(steam_id_set, steam_info_data, id_file_name):
             print(count, "IDs have been searched and saved, total", len(steam_info_data)) 
             with open(id_file_name + '.json', 'w') as f:
                 json.dump(steam_info_data, f)
-            if count%500 == 0:
+            if count%2000 == 0:
                 time.sleep(180)
 
     # Saving all the data
@@ -185,8 +185,8 @@ steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate
 root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
-id_file_name = "user_game" # The file name where the data will be stored
-num_new_id = 70000 # The approxmated number of result in this round of search
+id_file_name = "D://steamdata//user_game" # The file name where the data will be stored
+data_size = 200000# The approxmated number of result in this round of search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
@@ -207,12 +207,12 @@ while(True):
         
         steam_id_set, search_id_list, steam_info_data = load_data(id_file_name)
 
-        num_new_id = 100000-len(steam_id_set)
+        num_new_id = data_size-len(steam_id_set)
         steam_search(steam_id_set, search_id_list, id_file_name, num_new_id)
 
         game_info(steam_id_set, steam_info_data, id_file_name)
 
-        if len(steam_info_data)>1:
+        if len(steam_info_data)>=1:
             break
     except:
         print("Connection error at", datetime.datetime.now())
