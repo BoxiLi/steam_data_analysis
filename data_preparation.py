@@ -77,7 +77,8 @@ class user_game_matrix(object):
 
     def user_game_filter(self, user_stat, game_stat):
         """
-        Use the tow statstics dictionaries to filter the game_list and user_list
+        Use the tow statstics dictionaries to filter the game_list and user_list, the corresponding threshold is used and 
+        user_list, game_list are updated
         Return:
             useful_matrix_data: a list of game_list [[game1,game2,game3...], [game1, game2...]...]
                                 useful_matrix_data[i] is the games owned by user_list[i]
@@ -124,7 +125,7 @@ class user_game_matrix(object):
         num_users = len(self.user_list)
         num_games = len(self.game_list)
         # construct matrix
-        mat = sp.lil_matrix((num_users, num_games), dtype = np.int64)
+        mat = sp.lil_matrix((num_users, num_games), dtype = np.float64)
         matrix_func(self.user_list, self.game_list, mat, useful_matrix_data, game_index_dict)
 
         assert(mat.shape == (len(self.user_list), len(self.game_list)))
