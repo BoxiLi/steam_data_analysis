@@ -23,7 +23,8 @@ def steam_search(steam_id_set, search_id_list, id_file_name, num_result):
                 steam_id_set.add(fr[j].id)
 
                 count += 1
-                if count%1000 == 0:
+                if count%5000 == 0:
+                    time.sleep(120)
                     print(count, "new results have been found")
     
     # write search_id_list to a csv file
@@ -71,7 +72,6 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
             except steamapi.errors.AccessException:
                 new_id_info["games"] = []
             except: # I don't know why this error is not captured by steamapi
-                print(user.id)
                 new_id_info["games"] = []
             try:
                 date = user.time_created
@@ -97,6 +97,44 @@ def steam_info(steam_id_set, steam_info_data, id_file_name):
     # Saving all the data
     with open(id_file_name + '.json', 'w') as f:
         json.dump(steam_info_data, f)
+
+
+def game_info(steam_id_set, steam_info_data, id_file_name):
+    """
+    A reduced version of steam info, record only game info
+    This function takes a set of steam ids and call steamapi to get the detailed information
+    of them. The result is saved in a dicationary steam_info_data and in a json file.
+    """
+    count = 0
+    for id in steam_id_set:
+        # If this id has been searched already, ignore it (incase we want to increase datasize)
+        if str(id) in steam_info_data.keys():
+            continue
+
+        # Call the required information
+        user = steamapi.user.SteamUser(id)
+        new_id_info = {}
+
+        try:
+            steam_info_data[id] = user.game_time
+        except steamapi.errors.APIUnauthorized:
+            steam_info_data[id] = []
+        except:
+            steam_info_data[id] = []
+
+        # Saving during the process to prevent losing data
+        count += 1
+        if count%500 == 0:
+            print(count, "IDs have been searched and saved, total", len(steam_info_data)) 
+            with open(id_file_name + '.json', 'w') as f:
+                json.dump(steam_info_data, f)
+            if count%500 == 0:
+                time.sleep(180)
+
+    # Saving all the data
+    with open(id_file_name + '.json', 'w') as f:
+        json.dump(steam_info_data, f)
+
 
 
 def load_data(id_file_name):
@@ -147,8 +185,8 @@ steamapi.core.APIConnection(api_key="6B61866E0CAEBE0BE9804CAAB54502E9", validate
 root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
-id_file_name = "steam_data" # The file name where the data will be stored
-num_new_id = 0 # The approxmated number of result in this round of search
+id_file_name = "user_game" # The file name where the data will be stored
+num_new_id = 70000 # The approxmated number of result in this round of search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
@@ -166,16 +204,16 @@ num_new_id = 0 # The approxmated number of result in this round of search
 
 while(True):
     try:
+        
         steam_id_set, search_id_list, steam_info_data = load_data(id_file_name)
 
+        num_new_id = 100000-len(steam_id_set)
         steam_search(steam_id_set, search_id_list, id_file_name, num_new_id)
 
-        steam_info(steam_id_set, steam_info_data, id_file_name)
+        game_info(steam_id_set, steam_info_data, id_file_name)
 
-        if len(steam_info_data)>30000:
+        if len(steam_info_data)>1:
             break
     except:
         print("Connection error at", datetime.datetime.now())
         time.sleep(500)
-
-
