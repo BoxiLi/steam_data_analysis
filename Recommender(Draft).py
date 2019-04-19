@@ -44,7 +44,7 @@ def SVD(mat, feature = 20, step = 20000, Rate = 0.0000001, Type = 0, ItemFeature
             Pred = np.dot(UserFeature[p,:], ItemFeature[q,:].T)
             error = mat[p,q] - Pred
             #print("error = ",error)
-            rmse = rmse + pow(error, 2)/useful_entry_number
+            rmse = rmse + pow(error/useful_entry_number, 2)
             #type0 for the whole data set, type1 for new userdata.  
             if Type == 0:
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
