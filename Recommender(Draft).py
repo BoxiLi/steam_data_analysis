@@ -22,38 +22,37 @@ def matrix_func(mat, useful_matrix_data):
             mat[id_index, game_index] = pow(time/60,1/3)
 
 
-def SVD(mat, feature = 20, step = 20000, Rate = 0.01, Type = 0, ItemFeature = [0]):
+def SVD(mat, feature = 20, step = 20000, Rate = 0.0000001, Type = 0, ItemFeature = [0]):
 
-    ARmse = 100000000.0
+    ARmse = np.inf
     Rmse = 0.0
     lr = Rate
     Lambda = 0.01
     L = [[],[]]
     error = 0.0
     x=0.0
-    n=1062040
     UserFeature = np.matrix(np.random.rand(mat.shape[0], feature))
     if Type == 0:
         ItemFeature = np.matrix(np.random.rand(mat.shape[1], feature))
+    row_indices, col_indices = mat.nonzero() # Returns a tuple of arrays (row,col) containing the indices of the non-zero elements of the matrix.
+    useful_entry_number = len(row_indices)
     for i in range(step):
         rmse = 0.0
-        for p in range(mat.shape[0]):
-            for q in range(mat.shape[1]):
-                if not mat[p,q]==0:
-                    Pred = float(np.dot(UserFeature[p,:], ItemFeature[q,:].T))
-                    error = mat[p,q] - Pred
-               #     print("error = ",error)
-                    rmse = rmse + pow(error, 2)/n
-                #    print("rmse = ",rmse)
-                    n = n+1
-                #type0 for the whole data set, type1 for new userdata.  
-                    if Type == 0:
-                        UserFeature[p,:] = UserFeature[p,:] + lr * (error * ItemFeature[q,:] - Lambda * UserFeature[p,:])
-                        ItemFeature[q,:] = ItemFeature[q,:] + lr * (error * UserFeature[p,:] - Lambda * ItemFeature[q,:])
-                    elif (Type == 1):
-                        UserFeature[p,:] = UserFeature[p,:] + lr * (error * ItemFeature[q,:] - Lambda * UserFeature[p,:])
+        for entry_iter in range(useful_entry_number):
+            p = row_indices[entry_iter]
+            q = col_indices[entry_iter]
+            Pred = np.dot(UserFeature[p,:], ItemFeature[q,:].T)
+            error = mat[p,q] - Pred
+            #print("error = ",error)
+            rmse = rmse + pow(error, 2)/useful_entry_number
+            #type0 for the whole data set, type1 for new userdata.  
+            if Type == 0:
+                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
+                ItemFeature[q] = ItemFeature[q] + lr * (error * UserFeature[p] - Lambda * ItemFeature[q])
+            elif (Type == 1):
+                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
        #type0 for the whole data set, type1 for new userdata.                     
-        Rmse = np.sqrt(rmse/n)
+        Rmse = np.sqrt(rmse)
         print("Rmse = ", Rmse, "ARmse = ", ARmse)
         L[0].append(x+i*lr)
         L[1].append(Rmse)
@@ -115,7 +114,7 @@ def Recommed(User, ItemFeature):
 
 
 
-file_name = "E://LIFE//computational quantum physics//Datascience//user_game100k"
+file_name = "user_game100k"
 generator = user_game_matrix(file_name)
 # default of "played_required" is True
 generator.played_required = None
