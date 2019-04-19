@@ -15,7 +15,7 @@ class user_game_matrix(object):
         """
         json_data = open(file_name + ".json", 'r').read()
         self.user_game_data = json.loads(json_data)
-        print(file_name, "is loaded from the disk\n")
+        print(file_name + ".json is loaded from the disk\n")
         self.played_required = True
         self.thres_user = None
         self.thres_game = None
@@ -32,7 +32,7 @@ class user_game_matrix(object):
         """
         # go throught all data and record two dictionaries
         if self.played_required:
-            print("games with playtime 0 is neglected")
+            print("games with playtime 0 is neglected\n")
         game_stat = {}
         user_stat = {}
         useful_user_num = 0
@@ -158,7 +158,7 @@ def matrix_func(mat, useful_matrix_data):
             mat[id_index, game_index] = time
         
 
-file_name = "user_game30000"
+file_name = "D://steamdata//user_game"
 generator = user_game_matrix(file_name)
 # default of "played_required" is True
 generator.played_required = True

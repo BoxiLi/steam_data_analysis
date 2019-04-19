@@ -186,7 +186,7 @@ root = steamapi.user.SteamUser(userurl="kane2019")
 
 # parameters
 id_file_name = "D://steamdata//user_game" # The file name where the data will be stored
-data_size = 200000# The approxmated number of result in this round of search
+data_size = 1000000 # The approxmated number of result in this round of search
 
 # Important variables:
 # steam_id_set: steam_id_set saves the result id, this is a set object, which is not ordered 
@@ -212,7 +212,7 @@ while(True):
 
         game_info(steam_id_set, steam_info_data, id_file_name)
 
-        if len(steam_info_data)>=1:
+        if len(steam_info_data) >= data_size:
             break
     except:
         print("Connection error at", datetime.datetime.now())
