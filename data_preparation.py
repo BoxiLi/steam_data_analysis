@@ -122,7 +122,7 @@ class user_game_matrix(object):
         num_users = len(self.user_list)
         num_games = len(self.game_list)
         # construct matrix
-        mat = sp.coo_matrix((num_users, num_games), dtype = np.float64)
+        mat = sp.lil_matrix((num_users, num_games), dtype = np.float64)
         matrix_func(mat, useful_matrix_data)
 
         assert(mat.shape == (len(self.user_list), len(self.game_list)))
