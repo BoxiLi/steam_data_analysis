@@ -17,6 +17,7 @@ class user_game_matrix(object):
         json_data = open(file_name + ".json", 'r').read()
         self.user_game_data = json.loads(json_data)
         print(file_name + ".json is loaded from the disk\n")
+        self.normalize_func = None
         self.played_required = True
         self.thres_user = None
         self.thres_game = None
@@ -79,8 +80,11 @@ class user_game_matrix(object):
         Use the tow statstics dictionaries to filter the game_list and user_list, the corresponding threshold is used and 
         user_list, game_list are updated
         Return:
-            useful_matrix_data: a list of game_list [[game1,game2,game3...], [game1, game2...]...]
-                                useful_matrix_data[i] is the games owned by user_list[i]
+        useful_matrix_data: in the form of  [   [(game_index, time), (game_index, time), (game_index, time),..]      (for id 1)
+                                                [(game_index, time), (game_index, time)]                              (for id 2)
+                                                [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
+                                                ...]
+                            each line corrspods to the game of one id, length can be different
         """
         # create useful users and games list
         if not self.thres_game:
@@ -113,24 +117,33 @@ class user_game_matrix(object):
         assert(len(useful_matrix_data) == len(self.user_list))
         print("Number of users after filtering:", len(self.user_list))
         print("Number of games after filtering:", len(self.game_list))
+        print()
         return useful_matrix_data
 
 
     def create_matrix(self, useful_matrix_data):
         """
-        create the desired matrix with "matrix_func"
+        create the desired matrix with "normalize_func"
         """
         num_users = len(self.user_list)
         num_games = len(self.game_list)
         # construct matrix
         mat = sp.lil_matrix((num_users, num_games), dtype = np.float64)
-        mat = matrix_func(mat, useful_matrix_data)
+        for id_index in range(mat.shape[0]):
+            game_data = useful_matrix_data[id_index]
+            for game_index, time in game_data:
+                mat[id_index, game_index] = time
+        if self.normalize_func:
+            mat = self.normalize_func(mat)
+        else:
+            print("No normalization function is specified")
+            print()
 
         assert(mat.shape == (len(self.user_list), len(self.game_list)))
         return mat, self.user_list, self.game_list
 
 
-    def construct(self, matrix_element):
+    def construct(self):
         """
         run the whole process, data analysis and matrix construction
         """
@@ -140,37 +153,6 @@ class user_game_matrix(object):
         useful_matrix_data = self.user_game_filter(user_stat, game_stat)
         # create the matrix in scipy compressed sparse row format
         return self.create_matrix(useful_matrix_data)
-
-
-def matrix_func(mat, useful_matrix_data):
-    """
-    This function determines how the matrix element is calculated from the game time.
-    Input:
-        mat: empty scipy lil-sparse matrix of the shape (total_num_user, total_num_game)
-        useful_matrix_data: in the form of  [   [(game_index, time), (game_index, time), (game_index, time),..]      (for id 1)
-                                                [(game_index, time), (game_index, time)]                              (for id 2)
-                                                [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
-                                                ...]
-                            each line corrspods to the game of one id, length can be different
-    """
-    for id_index in range(mat.shape[0]):
-        game_data = useful_matrix_data[id_index]
-        for game_index, time in game_data:
-            mat[id_index, game_index] = time
-
-    # normalization
-    # change to csc form for easy column slicing
-    mat = mat.tocsc()
-    num_col = mat.shape[1]
-    for i in range(num_col):
-        # calculate the median of one column (for one game)
-        col = mat.getcol(i)
-        col_nonz = col[col.nonzero()[0]]
-        med = np.median(col_nonz.todense(), axis=0)[0,0]
-        # normalized with tanh, the median corresponds to tanh(0.5)
-        mat[:,i] = (col/2./med).tanh()
-
-    return mat.tolil()
         
         
 def plot_normalized(mat, i):
@@ -191,5 +173,6 @@ if __name__ == "__main__":
     generator.played_required = True
     generator.thres_game = None
     generator.thres_user = None
-    mat, user_list, game_list = generator.construct(matrix_func)
+    generator.normalize_func = tanh_normalize
+    mat, user_list, game_list = generator.construct()
     plot_normalized(mat, 3)
