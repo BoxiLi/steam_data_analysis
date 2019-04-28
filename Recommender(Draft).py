@@ -9,6 +9,28 @@ def pow_normalize(mat):
     return mat/60**(1./3.)
 
 
+def tanh_normalize(mat):
+    """
+    This function determines how the matrix element is calculated from the game time.
+    Input:
+        mat: empty scipy lil-sparse matrix of the shape (total_num_user, total_num_game)
+
+    """
+    # normalization
+    # change to csc form for easy column slicing
+    mat = mat.tocsc()
+    num_col = mat.shape[1]
+    for i in range(num_col):
+        # calculate the median of one column (for one game)
+        col = mat.getcol(i)
+        col_nonz = col[col.nonzero()[0]]
+        med = np.median(col_nonz.todense(), axis=0)[0,0]
+        # normalized with tanh, the median corresponds to tanh(0.5)
+        mat[:,i] = (col/2./med).tanh()
+
+    return mat.tolil()
+
+
 def SVD(mat, feature = 20, step = 1000, Rate = 0.0000001, Type = 0, ItemFeature = [0]):
 
     ARmse = np.inf
