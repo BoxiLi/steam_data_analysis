@@ -27,7 +27,17 @@ def steam_search(steam_id_set, search_id_list, id_file_name, num_result):
                     time.sleep(120)
                     print(count, "new results have been found")
     
-    # write search_id_list to a csv file
+                # write search_id_list to a csv file
+                with open(id_file_name + "_search.csv", "w") as f:
+                    writer = csv.writer(f, delimiter ="\n")
+                    writer.writerow(search_id_list)
+
+                # write steam_id_set to a csv file
+                with open(id_file_name + ".csv", "w") as f:
+                    writer = csv.writer(f, delimiter ="\n")
+                    writer.writerow(steam_id_set)
+
+        # write search_id_list to a csv file
     with open(id_file_name + "_search.csv", "w") as f:
         writer = csv.writer(f, delimiter ="\n")
         writer.writerow(search_id_list)

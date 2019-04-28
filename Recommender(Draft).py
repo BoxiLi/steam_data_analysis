@@ -5,24 +5,11 @@ import matplotlib.pyplot as plt
 from data_preparation import *
 
 
-def matrix_func(mat, useful_matrix_data):
-    """
-    This function determines how the matrix element is calculated from the game time.
-    Input:
-        mat: empty scipy lil-sparse matrix of the shape (total_num_user, total_num_game)
-        useful_matrix_data: in the form of  [   [(game_index, time), (game_index, time), (game_index, time),..]      (for id 1)
-                                                [(game_index, time), (game_index, time)]                              (for id 2)
-                                                [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
-                                                ...]
-                            each line corrspods to the game of one id, length can be different
-    """
-    for id_index in range(mat.shape[0]):
-        game_data = useful_matrix_data[id_index]
-        for game_index, time in game_data:
-            mat[id_index, game_index] = pow(time/60,1/3)
+def pow_normalize(mat):
+    return mat/60**(1./3.)
 
 
-def SVD(mat, feature = 20, step = 20000, Rate = 0.0000001, Type = 0, ItemFeature = [0]):
+def SVD(mat, feature = 20, step = 1000, Rate = 0.0000001, Type = 0, ItemFeature = [0]):
 
     ARmse = np.inf
     Rmse = 0.0
@@ -84,7 +71,6 @@ def ItemBase(OwnItem, ItemFeature, NNN):
 #return n recommendation
 
 
-
 def UserSVD(User, ItemFeature0, RN):
     Avg = np.average(User)
     UserFeature = SVD(User, Type = 1, ItemFeature = ItemFeature0)[0]
@@ -120,5 +106,6 @@ generator = user_game_matrix(file_name)
 generator.played_required = None
 generator.thres_game = None
 generator.thres_user = None
-mat, user_list, game_list = generator.construct(matrix_func)
+generator.normalize_func = tanh_normalize
+mat, user_list, game_list = generator.construct()
 result = SVD(mat)
