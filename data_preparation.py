@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 import json
+import matplotlib.pyplot as plt
 
 class user_game_matrix(object):
     def __init__(self, file_name):
@@ -123,7 +124,7 @@ class user_game_matrix(object):
         num_games = len(self.game_list)
         # construct matrix
         mat = sp.lil_matrix((num_users, num_games), dtype = np.float64)
-        matrix_func(mat, useful_matrix_data)
+        mat = matrix_func(mat, useful_matrix_data)
 
         assert(mat.shape == (len(self.user_list), len(self.game_list)))
         return mat, self.user_list, self.game_list
@@ -156,16 +157,39 @@ def matrix_func(mat, useful_matrix_data):
         game_data = useful_matrix_data[id_index]
         for game_index, time in game_data:
             mat[id_index, game_index] = time
+
+    # normalization
+    # change to csc form for easy column slicing
+    mat = mat.tocsc()
+    num_col = mat.shape[1]
+    for i in range(num_col):
+        # calculate the median of one column (for one game)
+        col = mat.getcol(i)
+        col_nonz = col[col.nonzero()[0]]
+        med = np.median(col_nonz.todense(), axis=0)[0,0]
+        # normalized with tanh, the median corresponds to tanh(0.5)
+        mat[:,i] = (col/2./med).tanh()
+
+    return mat.tolil()
         
+        
+def plot_normalized(mat, i):
+    """
+    This can be used to plot the histogram of column i of the matrix.
+    """
+    col = mat.getcol(i)
+    col_nonz = col[col.nonzero()[0]]
+    game_line = np.array(col_nonz.todense())
+    plt.hist(game_line)
+    plt.show()
+
+
 if __name__ == "__main__":
-    file_name = "D://steamdata//user_game"
+    file_name = "D://steamdata//user_game100k"
     generator = user_game_matrix(file_name)
     # default of "played_required" is True
     generator.played_required = True
     generator.thres_game = None
     generator.thres_user = None
     mat, user_list, game_list = generator.construct(matrix_func)
-"""
-Warning, the matrix is in sp.csr form, row slicing is fast but column slicing is very slow, O(nm). 
-Using mat.to_csc() if column operation is more required.
-"""
+    plot_normalized(mat, 3)
