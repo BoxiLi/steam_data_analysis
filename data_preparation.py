@@ -126,7 +126,7 @@ class user_game_matrix(object):
         matrix_func(mat, useful_matrix_data)
 
         assert(mat.shape == (len(self.user_list), len(self.game_list)))
-        return mat.tocsr(), self.user_list, self.game_list
+        return mat, self.user_list, self.game_list
 
 
     def construct(self, matrix_element):
@@ -157,14 +157,14 @@ def matrix_func(mat, useful_matrix_data):
         for game_index, time in game_data:
             mat[id_index, game_index] = time
         
-
-file_name = "D://steamdata//user_game"
-generator = user_game_matrix(file_name)
-# default of "played_required" is True
-generator.played_required = True
-generator.thres_game = None
-generator.thres_user = None
-mat, user_list, game_list = generator.construct(matrix_func)
+if __name__ == "__main__":
+    file_name = "D://steamdata//user_game"
+    generator = user_game_matrix(file_name)
+    # default of "played_required" is True
+    generator.played_required = True
+    generator.thres_game = None
+    generator.thres_user = None
+    mat, user_list, game_list = generator.construct(matrix_func)
 """
 Warning, the matrix is in sp.csr form, row slicing is fast but column slicing is very slow, O(nm). 
 Using mat.to_csc() if column operation is more required.
