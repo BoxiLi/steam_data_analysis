@@ -76,15 +76,15 @@ def UserSVD(User, ItemFeature0, RN):
     UserFeature = SVD(User, Type = 1, ItemFeature = ItemFeature0)[0]
     PItem = []
     for i in range(len(User)):
-        if np.isnan(User[i]):
-            PItem.append(ItemFeature[i])
-    Result = np.dot(UserFeature, PItem.T)
+        if User[i]==0:
+            PItem.append(ItemFeature0[i])
+    Result = np.dot(UserFeature, np.matrix(PItem).T)
     Rec = np.sort(Result)
     Index = np.argsort(Result)
     n = 0
     for i in range(RN):
         n = n+1
-        if Rec[i] < User:
+        if Rec[i] < Avg:
             break
     return Index[:n]
     
