@@ -4,12 +4,15 @@ def user_filter(file_name, Lower_limit = 50, User = 1000):
     json_data = open(file_name + ".json", 'r').read()
     user_game_data = json.loads(json_data)
     User_fil = []
-    for id in user_game_data:
-        user_game = user_game_data[id]
-        if len(user_game) >= Lower_limit:
-            User_fil.append(user_game)
-    return user_fil
-    
+    n = 0
+    while n < User: 
+        for id in user_game_data:
+            user_game = user_game_data[id]
+            if len(user_game) >= Lower_limit:
+                User_fil.append(user_game)
+                n = n+1
+    return User_fil
+
 def data_prep(library, games):
     library_set = set(library)
     games_set = set(games)
