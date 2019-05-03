@@ -211,7 +211,8 @@ def SVD_2(mat, game_list, user, feature = 20, step = 1000, Rate = 0.00001, Type 
         print("Rmse = ", Rmse, "ARmse = ", ARmse)
         L[0].append(x+i*lr)
         L[1].append(Rmse)
-        rmse_for_eva.append(evaluation(ItemFeature, game_list, user))
+
+        rmse_for_eva.append(evaluation(ItemFeature, game_list, user)) #Calculate error for one step
 
         if Rmse < ARmse:
             ARmse = Rmse
