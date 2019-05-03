@@ -109,7 +109,8 @@ mat, user_list, game_list = generator.construct()
 result = SVD(mat)
 """
 
-def library_prep(user_data):
+
+
 
 def user_filter(file_name, Lower_limit = 50, User = 1000):
     json_data = open(file_name + ".json", 'r').read()
@@ -123,11 +124,10 @@ def user_filter(file_name, Lower_limit = 50, User = 1000):
             if not time == 0:
                 game_nonz.append(time)
         mean = np.mean(game_nonz)
+        user_game_norm = []
         if len(user_game) >= Lower_limit:
             for gameid, time in user_game:
-                if not time == 0:
-                    user_game_norm.append([gameid, time])
-                user_game_norm.append([gameid, np.tanh(time/2./mean)])
+                user_game_norm.append([gameid, np.tanh(time/2.0/mean)])
             User_fil.append(user_game_norm)
             n = n+1
         if n == User:
@@ -143,14 +143,23 @@ def data_prep(library, games):
         for j in range(len(library)):
             if prep_user[i] == library[j]:
                 index.append(j)
-    return set(prep_user), index
+    return set(prep_user), index 
 
-def evaluation(itemfeature, library, Userdata, n = 20):
+def evaluation(itemfeature, library, Userdata, n = 20, feature1 = 20, rate = 0.1):
+    #games = []
+    #for game_id, time in Userdata:
+    #    games.append(game_id)
     games = [game_id for game_id, time in Userdata]
     prep_user, index = data_prep(library, games)
+    #Prep_userdata = []
+    #for game_id, time in Userdata:
+    #    if game_id in prep_user:
+    #        Prep_userdata.append([game_id, time])
+    #print(Prep_userdata)
     Prep_userdata = [[game_id, time] for game_id, time in Userdata if game_id in prep_user]
-    games_for_learn = np.matrix(Prep_userdata[n : ])
-    a = SVD(games_for_learn, Type = 1, ItemFeature = itemfeature)
+    games_for_learn = np.matrix([time for gameid, time in Prep_userdata[n : ]])
+    print(games_for_learn)
+    a = SVD(games_for_learn, feature = feature1, Rate = rate, Type = 1, ItemFeature = itemfeature)
     userfeature = a[0]
     Rmse = 0
     for i in range(n):
