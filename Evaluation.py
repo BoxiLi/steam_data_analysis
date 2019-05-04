@@ -37,7 +37,7 @@ def SVD(mat, feature = 20, step = 1000, Rate = 0.00001, Type = 0, ItemFeature = 
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
                 ItemFeature[q] = ItemFeature[q] + lr * (error * UserFeature[p] - Lambda * ItemFeature[q])
             elif (Type == 1):
-                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
+                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q])
        #type0 for the whole data set, type1 for new userdata.                     
         Rmse = np.sqrt(rmse)
         print("Rmse = ", Rmse, "ARmse = ", ARmse)
@@ -116,7 +116,7 @@ result = SVD(mat)
 
 # This part for Evaluation
 
-def user_filter(file_name, Lower_limit = 50, User = 1000):
+def user_filter(file_name, Lower_limit = 50, User = 1000, played_required = None):
     json_data = open(file_name + ".json", 'r').read()
     user_game_data = json.loads(json_data)
     User_fil = []
@@ -124,16 +124,26 @@ def user_filter(file_name, Lower_limit = 50, User = 1000):
     for id in user_game_data:
         user_game = user_game_data[id]
         game_nonz = []
+        time_nonz = []
         for gameid, time in user_game:
             if not time == 0:
-                game_nonz.append(time)    
-        mean = np.mean(game_nonz)
+                game_nonz.append([gameid,time])
+                time_nonz.append(time)
+        mean = np.mean(time_nonz)
+        len_played = len(game_nonz)
         user_game_norm = []
-        if len(user_game) >= Lower_limit:
-            for gameid, time in user_game:
-                user_game_norm.append([gameid, np.tanh(time/2.0/mean)])
-            User_fil.append(user_game_norm)
-            n = n+1
+        if played_required:
+            if len_played >= Lower_limit:
+                for gameid, time in game_nonz:
+                    user_game_norm.append([gameid, np.tanh(time/2.0/mean)])
+                User_fil.append(user_game_norm)    
+                n = n+1
+        else:
+            if len(user_game) >= Lower_limit:
+                for gameid, time in user_game:
+                    user_game_norm.append([gameid, np.tanh(time/2.0/mean)])
+                User_fil.append(user_game_norm)
+                n = n+1
         if n == User:
             break
     return User_fil
@@ -149,7 +159,7 @@ def data_prep(library, games):
                 index.append(j)
     return set(prep_user), index 
 
-def evaluation(itemfeature, library, Userdata, n = 20, feature1 = 20, rate = 0.1):
+def evaluation(itemfeature, library, Userdata, n = 20, feature1 = 20, rate = 0.01):
     #games = []
     #for game_id, time in Userdata:
     #    games.append(game_id)
@@ -162,15 +172,17 @@ def evaluation(itemfeature, library, Userdata, n = 20, feature1 = 20, rate = 0.1
     #print(Prep_userdata)
     Prep_userdata = [[game_id, time] for game_id, time in Userdata if game_id in prep_user]
     games_for_learn = np.matrix([time for gameid, time in Prep_userdata[n : ]])
-    print(games_for_learn)
+    rmse_for_learn = []
     a = SVD(games_for_learn, feature = feature1, Rate = rate, Type = 1, ItemFeature = itemfeature)
+    rmse_for_learn = a[4]
     userfeature = a[0]
     Rmse = 0
     for i in range(n):
         error = np.dot(userfeature, np.matrix(itemfeature[index[i]]).T) - Userdata[i][1]
         Rmse = Rmse + pow(error/n, 2)
     rmse = np.sqrt(Rmse)
-    return rmse
+    print(rmse)
+    return rmse, rmse_for_learn
 # end of evaluation part
 
 
@@ -186,6 +198,7 @@ def SVD_2(mat, game_list, user, feature = 20, step = 1000, Rate = 0.00001, Type 
     error = 0.0
     x=0.0
     rmse_for_eva = []
+    rmse_for_learn = []
     UserFeature = np.matrix(np.random.rand(mat.shape[0], feature))
     if Type == 0:
         ItemFeature = np.matrix(np.random.rand(mat.shape[1], feature))
@@ -205,15 +218,15 @@ def SVD_2(mat, game_list, user, feature = 20, step = 1000, Rate = 0.00001, Type 
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
                 ItemFeature[q] = ItemFeature[q] + lr * (error * UserFeature[p] - Lambda * ItemFeature[q])
             elif (Type == 1):
-                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
+                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q])
        #type0 for the whole data set, type1 for new userdata.                     
         Rmse = np.sqrt(rmse)
         print("Rmse = ", Rmse, "ARmse = ", ARmse)
         L[0].append(x+i*lr)
         L[1].append(Rmse)
-
-        rmse_for_eva.append(evaluation(ItemFeature, game_list, user)) #Calculate error for one step
-
+        result = evaluation(ItemFeature, game_list, user)
+        rmse_for_eva.append(result[0]) #Calculate error for one step
+        rmse_for_learn.append(result[1])
         if Rmse < ARmse:
             ARmse = Rmse
        #     lr = lr*0.99
@@ -223,23 +236,25 @@ def SVD_2(mat, game_list, user, feature = 20, step = 1000, Rate = 0.00001, Type 
             break
     LearningProcess = L
     Result = np.dot(UserFeature, ItemFeature.T)
-    return UserFeature, ItemFeature, LearningProcess, Result,  ARmse, rmse_for_eva
+    return UserFeature, ItemFeature, LearningProcess, Result,  ARmse, rmse_for_eva, rmse_for_learn
 
-def main(type = 0):
+def main(type = 0, Feature = 20, Step = 300, rate = 0.001):
     file_name = "user_game30k"
     file_name2 = "user_game300k"  # providing data for evaluating
     generator = user_game_matrix(file_name)
 # default of "played_required" is True
-    generator.played_required = None
+    generator.played_required = True
     generator.thres_game = None
     generator.thres_user = None
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()  
-    user = user_filter(file_name2, User = 20)
+    user = user_filter(file_name2, User = 20, played_required= True)
     if type == 0:
-        rmse_for_eva = SVD_2(mat, game_list, user, Rate = 0.001) # records of errors step by step
+        rmse_for_eva = SVD_2(mat, game_list, user[2], step = Step, Rate = rate) # records of errors step by step
+        return rmse_for_eva
     elif type == 1:
-        rmse_for_feature = SVD(mat, feature = 19, Rate = 0.001) # records of errors for different feature number
+        rmse_for_feature = SVD(mat, feature = Feature, Rate = rate) # records of errors for different feature number
+        return rmse_for_feature
         
 
 """    
