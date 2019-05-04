@@ -129,7 +129,7 @@ def user_filter(file_name, Lower_limit = 50, User = 1000, played_required = None
             if not time == 0:
                 game_nonz.append([gameid,time])
                 time_nonz.append(time)
-        mean = np.mean(time_nonz)
+        mean = np.median(time_nonz)
         len_played = len(game_nonz)
         user_game_norm = []
         if played_required:
@@ -171,6 +171,7 @@ def evaluation(itemfeature, library, Userdata, n = 20, feature1 = 20, rate = 0.0
     #        Prep_userdata.append([game_id, time])
     #print(Prep_userdata)
     Prep_userdata = [[game_id, time] for game_id, time in Userdata if game_id in prep_user]
+    
     games_for_learn = np.matrix([time for gameid, time in Prep_userdata[n : ]])
     rmse_for_learn = []
     a = SVD(games_for_learn, feature = feature1, Rate = rate, Type = 1, ItemFeature = itemfeature)
@@ -218,15 +219,17 @@ def SVD_2(mat, game_list, user, feature = 20, step = 1000, Rate = 0.00001, Type 
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
                 ItemFeature[q] = ItemFeature[q] + lr * (error * UserFeature[p] - Lambda * ItemFeature[q])
             elif (Type == 1):
-                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q])
+                UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[q])
        #type0 for the whole data set, type1 for new userdata.                     
         Rmse = np.sqrt(rmse)
         print("Rmse = ", Rmse, "ARmse = ", ARmse)
         L[0].append(x+i*lr)
         L[1].append(Rmse)
+        #
         result = evaluation(ItemFeature, game_list, user)
         rmse_for_eva.append(result[0]) #Calculate error for one step
         rmse_for_learn.append(result[1])
+        #
         if Rmse < ARmse:
             ARmse = Rmse
        #     lr = lr*0.99
@@ -243,14 +246,14 @@ def main(type = 0, Feature = 20, Step = 300, rate = 0.001):
     file_name2 = "user_game300k"  # providing data for evaluating
     generator = user_game_matrix(file_name)
 # default of "played_required" is True
-    generator.played_required = True
+    generator.played_required = None
     generator.thres_game = None
     generator.thres_user = None
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()  
-    user = user_filter(file_name2, User = 20, played_required= True)
+    user = user_filter(file_name2, User = 20, played_required = None)
     if type == 0:
-        rmse_for_eva = SVD_2(mat, game_list, user[2], step = Step, Rate = rate) # records of errors step by step
+        rmse_for_eva = SVD_2(mat, game_list, user[3], step = Step, Rate = rate) # records of errors step by step
         return rmse_for_eva
     elif type == 1:
         rmse_for_feature = SVD(mat, feature = Feature, Rate = rate) # records of errors for different feature number
