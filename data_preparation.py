@@ -21,8 +21,6 @@ class user_game_matrix(object):
         self.played_required = True
         self.thres_user = None
         self.thres_game = None
-        self.user_list = None
-        self.game_list = None
 
 
     def user_game_analysis(self):
@@ -75,85 +73,118 @@ class user_game_matrix(object):
 
         return user_stat, game_stat
 
+
     def user_game_filter(self, user_stat, game_stat):
         """
-        Use the tow statstics dictionaries to filter the game_list and user_list, the corresponding threshold is used and 
-        user_list, game_list are updated
-        Return:
-        useful_matrix_data: in the form of  [   [(game_index, time), (game_index, time), (game_index, time),..]      (for id 1)
-                                                [(game_index, time), (game_index, time)]                              (for id 2)
-                                                [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
-                                                ...]
-                            each line corrspods to the game of one id, length can be different
+        Use the tow statstics dictionaries to construct the game_list and user_list containing users and games 
+        above the thresholds
         """
-        # create useful users and games list
+        # choose a threshold
         if not self.thres_game:
             perchase_median = np.median(list(game_stat.values()))
             self.thres_game = perchase_median
-        print("The threshold for game is", self.thres_game)
+        print("The threshold for game is >", self.thres_game)
         if not self.thres_user:
             owned_game_num_median = np.median(list(user_stat.values()))
             self.thres_user = owned_game_num_median
-        print("The threshold for user is", self.thres_user)
+        print("The threshold for user is >", self.thres_user)
         print()
 
-        self.user_list = [user for user, num in user_stat.items() if num >= self.thres_user]
-        self.game_list = [game for game, num in game_stat.items() if num >= self.thres_game]
+        # create a temporary matrix for filtering
+        user_list = [user for user, num in user_stat.items() if num >= self.thres_user]
+        game_list = [game for game, num in game_stat.items() if num >= self.thres_game]
+        mat = self.create_matrix(user_list, game_list)
 
-        # create useful matrix data with 
-        game_index_dict = {game: index for index, game in enumerate(self.game_list)}
+        # iteratively delete users and games that have too few entries (samller than the threshold)
+        last_size = np.inf
+        eliminated_row = set()
+        eliminated_col = set()
+        loop_count = 0
+        while(last_size > mat.count_nonzero()):
+            last_size = mat.count_nonzero()
+            # if a user has too few entries, set the whole line to 0
+            mat = mat.tocsr()
+            for row_ind in range(mat.shape[0]):
+                if row_ind not in eliminated_row:
+                    num_nonzero_row = mat[row_ind].count_nonzero()
+                    if num_nonzero_row <= self.thres_user:
+                        mat.data[mat.indptr[row_ind]:mat.indptr[row_ind+1]] = 0.0
+                        eliminated_row.add(row_ind)
+            # if a game has too few entries, set the whole column to 0
+            mat = mat.tocsc()
+            for col_ind in range(mat.shape[1]):
+                if col_ind not in eliminated_col:
+                    num_nonzero_col = mat.getcol(col_ind).count_nonzero()
+                    if num_nonzero_col <= self.thres_game:
+                        mat.data[mat.indptr[col_ind]:mat.indptr[col_ind+1]] = 0.0
+                        eliminated_col.add(col_ind)
+            loop_count+=1
+        print("The filering went through {} iterations:".format(loop_count))
+            
+        users_to_delte = {user_list[ind] for ind in eliminated_row}
+        user_list = [user for user in user_list if user not in users_to_delte]
+        games_to_delete = {game_list[ind] for ind in eliminated_col}
+        game_list = [game for game in game_list if game not in games_to_delete]
+        print("Number of users after filtering:", len(user_list))
+        print("Number of games after filtering:", len(game_list))
+        print()
+        return user_list, game_list
+
+
+    def create_matrix(self, user_list, game_list):
+        """
+        create the sparse matrix with the user_list and game_list
+        useful_matrix_data: in the form of  [   [(game_index, time), (game_index, time), (game_index, time),..]      (for id 1)
+                                                [(game_index, time), (game_index, time)]                              (for id 2)
+                                                [(game_index, time), (game_index, time), (game_index, time),..]      (for id 3)
+                                                ...
+                                            ]
+                each line corrspods to the game of one id, length can be different
+        """
+        # create useful matrix data only with the games and users in the game_list and user_list
+        game_index_dict = {game: index for index, game in enumerate(game_list)}
         useful_matrix_data = []
-        for id in self.user_list:
+        for id in user_list:
             game_data =  self.user_game_data[id]
             if self.played_required:
                 new_game_data = [(game_index_dict[game], time) for game, time in game_data if time > 0 and game in game_index_dict]
             else:
                 new_game_data = [(game_index_dict[game], time) for game, time in game_data if game in game_index_dict]
             useful_matrix_data.append(new_game_data)
-            # It can happen that the filtered user has lesser than thresold number of games because some of games was deleted
-            # But we make sure that all games have enough user because this number is smaller
+        assert(len(useful_matrix_data) == len(user_list))
 
 
-        assert(len(useful_matrix_data) == len(self.user_list))
-        print("Number of users after filtering:", len(self.user_list))
-        print("Number of games after filtering:", len(self.game_list))
-        print()
-        return useful_matrix_data
-
-
-    def create_matrix(self, useful_matrix_data):
-        """
-        create the desired matrix with "normalize_func"
-        """
-        num_users = len(self.user_list)
-        num_games = len(self.game_list)
+        num_users = len(user_list)
+        num_games = len(game_list)
         # construct matrix
         mat = sp.lil_matrix((num_users, num_games), dtype = np.float64)
         for id_index in range(mat.shape[0]):
             game_data = useful_matrix_data[id_index]
             for game_index, time in game_data:
                 mat[id_index, game_index] = time
+
+
+        assert(mat.shape == (len(user_list), len(game_list)))
+        return mat
+
+
+    def construct(self):
+        """
+        run the whole process, data analysis and matrix creationg, add the normalization 
+        """
+        # analysis the statistics of the game data (number of perchase)
+        user_stat, game_stat = self.user_game_analysis()
+        # remove games and users that have too few perchase
+        user_list, game_list = self.user_game_filter(user_stat, game_stat)
+        # create the matrix in scipy compressed sparse row format
+        mat = self.create_matrix(user_list, game_list)
         if self.normalize_func:
             mat = self.normalize_func(mat)
         else:
             print("No normalization function is specified")
             print()
+        return mat, user_list, game_list
 
-        assert(mat.shape == (len(self.user_list), len(self.game_list)))
-        return mat, self.user_list, self.game_list
-
-
-    def construct(self):
-        """
-        run the whole process, data analysis and matrix construction
-        """
-        # analysis the statistics of the game data (number of perchase)
-        user_stat, game_stat = self.user_game_analysis()
-        # remove games and users that have too few perchase
-        useful_matrix_data = self.user_game_filter(user_stat, game_stat)
-        # create the matrix in scipy compressed sparse row format
-        return self.create_matrix(useful_matrix_data)
-        
         
 def plot_normalized(mat, i):
     """
@@ -188,12 +219,12 @@ def tanh_normalize(mat):
     return mat.tolil()
 
 if __name__ == "__main__":
-    file_name = "D://steamdata//user_game100k"
+    file_name = "user_game300k"
     generator = user_game_matrix(file_name)
     # default of "played_required" is True
     generator.played_required = True
-    generator.thres_game = None
-    generator.thres_user = None
+    generator.thres_game = 20
+    generator.thres_user = 20
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()
-    plot_normalized(mat, 3)
+    # plot_normalized(mat, 3)
