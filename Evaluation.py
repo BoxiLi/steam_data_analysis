@@ -18,9 +18,9 @@ def SVD(mat, feature = 20, step = 300, Rate = 0.0001, Type = 0, ItemFeature = [0
     error = 0.0
     x=0.0
     np.random.seed(0)
-    UserFeature = np.matrix(np.random.rand(mat.shape[0], feature))
+    UserFeature = np.matrix(np.random.rand(mat.shape[0], feature)*np.sqrt(2/feature))
     if Type == 0:
-        ItemFeature = np.matrix(np.random.rand(mat.shape[1], feature))
+        ItemFeature = np.matrix(np.random.rand(mat.shape[1], feature)*np.sqrt(2/feature))
     row_indices, col_indices = mat.nonzero() # Returns a tuple of arrays (row,col) containing the indices of the non-zero elements of the matrix.
     useful_entry_number = len(row_indices)
     for i in range(step):
@@ -31,7 +31,7 @@ def SVD(mat, feature = 20, step = 300, Rate = 0.0001, Type = 0, ItemFeature = [0
             Pred = np.dot(UserFeature[p,:], ItemFeature[q,:].T)
             error = mat[p,q] - Pred
             #print("error = ",error)
-            rmse = rmse + pow(error/useful_entry_number, 2)
+            rmse = rmse + pow(error/np.sqrt(useful_entry_number), 2)
             #type0 for the whole data set, type1 for new userdata.  
             if Type == 0:
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
@@ -51,8 +51,8 @@ def SVD(mat, feature = 20, step = 300, Rate = 0.0001, Type = 0, ItemFeature = [0
         else:
             break
     LearningProcess = L
-    Result = np.dot(UserFeature, ItemFeature.T)
-    return UserFeature, ItemFeature, LearningProcess, Result,  ARmse
+    #Result = np.dot(UserFeature, ItemFeature.T)
+    return UserFeature, ItemFeature, LearningProcess,  ARmse
 
 
 
@@ -204,19 +204,21 @@ def evaluation(itemfeature, library, Userdata, index, n = 20, feature1 = 20, rat
     #print(Prep_userdata)
     Prep_userdata = Userdata
     print(len(Prep_userdata))
-    m = 0
-    ind = 0
-    for game_id, time in Prep_userdata:
-        ind = ind + 1
-        if not time == 0:
-            m = m+1
-        if m == n:
-            break
-    mat_for_learn = [] 
-    for game_id, time in Prep_userdata[:ind]:
-        mat_for_learn.append(0)
-    for game_id, time in Prep_userdata[ind:]:
-        mat_for_learn.append(time)
+    mat_for_learn = []
+    for i in range(len(Userdata)):
+        mat_for_learn.append([])
+        m = 0
+        ind = 0
+        for game_id, time in Prep_userdata[i]:
+            ind = ind + 1
+            if not time == 0:
+                m = m+1
+            if m == n:
+                break
+        for game_id, time in Prep_userdata[i][:ind]:
+            mat_for_learn[i].append(0)
+        for game_id, time in Prep_userdata[i][ind:]:
+            mat_for_learn[i].append(time)
 
     games_for_learn = np.matrix(mat_for_learn)
     print(len(mat_for_learn))
@@ -224,20 +226,21 @@ def evaluation(itemfeature, library, Userdata, index, n = 20, feature1 = 20, rat
 #    games_for_learn = np.matrix([time for gameid, time in Prep_userdata[n : ]])
     rmse_for_learn = []
     a = SVD(games_for_learn, feature = feature1, Rate = rate, Type = 1, ItemFeature = itemfeature)
-    rmse_for_learn = a[4]
+    rmse_for_learn = a[3]
     userfeature = a[0]
     print(len(userfeature))
     Rmse = 0
     for i in range(n):
-        error = np.dot(userfeature, np.matrix(itemfeature[index[i]]).T) - Userdata[index[i]][1]
-        Rmse = Rmse + pow(error/n, 2)
+        for j in range(len(Userdata)):
+            error = np.dot(userfeature[j], np.matrix(itemfeature[index[j][i]]).T) - Userdata[j][index[j][i]][1]
+            Rmse = Rmse + pow(error[0,0]/np.sqrt(n*len(Userdata)), 2)
     rmse = np.sqrt(Rmse)
     print(rmse)
     return rmse, rmse_for_learn
 # end of evaluation part
 
 
-def SVD_2(mat, game_list, user, user_index, feature = 20, step = 1000, Rate = 0.00001, Type = 0, ItemFeature = [0]):
+def SVD_2(mat, game_list, user, user_index, feature = 20, step = 1000, Rate = 0.0001, Type = 0, ItemFeature = [0]):
 
     # Calculate ARmse step by step
 
@@ -263,7 +266,7 @@ def SVD_2(mat, game_list, user, user_index, feature = 20, step = 1000, Rate = 0.
             Pred = np.dot(UserFeature[p,:], ItemFeature[q,:].T)
             error = mat[p,q] - Pred
             #print("error = ",error)
-            rmse = rmse + pow(error/useful_entry_number, 2)
+            rmse = rmse + pow(error/np.sqrt(useful_entry_number), 2)
             #type0 for the whole data set, type1 for new userdata.  
             if Type == 0:
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q] - Lambda * UserFeature[p])
@@ -288,27 +291,40 @@ def SVD_2(mat, game_list, user, user_index, feature = 20, step = 1000, Rate = 0.
         else:
             break
     LearningProcess = L
-    Result = np.dot(UserFeature, ItemFeature.T)
-    return UserFeature, ItemFeature, LearningProcess, Result,  ARmse, rmse_for_eva, rmse_for_learn
+    #Result = np.dot(UserFeature, ItemFeature.T)
+    return UserFeature, ItemFeature, LearningProcess,  ARmse, rmse_for_eva, rmse_for_learn
 
-def main(type = 0, Feature = 20, Step = 300, rate = 0.001):
+def main(type = 0, Feature = 20, Step = 300, rate = 0.001, user_number = 5):
     file_name = "user_game30k"
     file_name2 = "user_game300k"  # providing data for evaluating
     generator = user_game_matrix(file_name)
 # default of "played_required" is True
     generator.played_required = True
-    generator.thres_game = None
-    generator.thres_user = None
+    generator.thres_game = 20
+    generator.thres_user = 20
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()  
-    user, index= user_filter(file_name2, game_list, User = 20, played_required = True)
+    user, index= user_filter(file_name2, game_list, User = 100, played_required = True)
+    import csv
+    csvFile = open("data1.csv", "w")
+    writer = csv.writer(csvFile)
     if type == 0:
-        rmse_for_eva = SVD_2(mat, game_list, user[3], index[3], step = Step, Rate = rate) # records of errors step by step
+        rmse_m = []
+        user_for_use = []
+        index_for_use = []
+        for i in range(user_number):
+            user_for_use.append(user[i+30])
+            index_for_use.append(index[i+30])
+        rmse_for_eva = SVD_2(mat, game_list, user_for_use, index_for_use, step = Step, Rate = rate) # records of errors step by step
+        writer.writerow(rmse_for_eva[4])
         return rmse_for_eva
     elif type == 1:
         rmse_for_feature = SVD(mat, feature = Feature, Rate = rate) # records of errors for different feature number
         return rmse_for_feature
-        
+    x=[i for i in range(len(rmse_for_eva[4]))]
+    plt.plot(x, rmse_for_eva[4])
+    plt.show()
+    
 
 """    
 import json
