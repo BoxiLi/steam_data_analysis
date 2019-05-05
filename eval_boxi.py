@@ -30,7 +30,6 @@ def dig_hole_evaluation(feature_num = 20, step_num = 10, rate = 0.001, num_sampl
     generator.thres_user = 20
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()
-    print(mat.count_nonzero())
 
     # dig holes, pick random coordinates in mat and set them to 0
     row_indices, col_indices = mat.nonzero()
@@ -41,7 +40,7 @@ def dig_hole_evaluation(feature_num = 20, step_num = 10, rate = 0.001, num_sampl
     hole_values = [mat[index] for index in hole_indices] # record existing mat entries
     for index in hole_indices:
         mat[index] = 0. # set to 0, delete it from the sparse mat so that it will be fitted)
-    print(mat.count_nonzero())
+
     # run optimization (see recommender.optimize)
     recommender = SVD_recommender(mat, feature_num)
     learn_procress = [np.inf]*5 # inf just for compare, will be deleted at the end
@@ -57,7 +56,7 @@ def dig_hole_evaluation(feature_num = 20, step_num = 10, rate = 0.001, num_sampl
             break
     return recommender.UserFeature, recommender.ItemFeature, learn_procress[5:], eval_process
 
-UserFeature, ItemFeature, learn_procress, eval_process = dig_hole_evaluation(feature_num = 20, step_num = 1000, rate = 0.001, num_samples = 100, file_name = "user_game30k")
+UserFeature, ItemFeature, learn_procress, eval_process = dig_hole_evaluation(feature_num = 20, step_num = 100, rate = 0.001, num_samples = 100, file_name = "user_game100k")
 plt.plot(learn_procress, label = "learn")
 plt.plot(eval_process, label = "eval")
 plt.show()
