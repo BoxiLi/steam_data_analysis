@@ -42,6 +42,8 @@ def SVD(mat, feature = 20, step = 300, Rate = 0.0001, Type = 0, ItemFeature = [0
                 UserFeature[p] = UserFeature[p] + lr * (error * ItemFeature[q])
         #type0 for the whole data set, type1 for new userdata.                     
         Rmse = np.sqrt(rmse)
+        if i%100==0:
+            print("{} steps finished".format(i))
         # print("Rmse = ", Rmse, "ARmse = ", ARmse) no print in multiprocessing, too many
         L[0].append(x+i*lr)
         L[1].append(Rmse)
