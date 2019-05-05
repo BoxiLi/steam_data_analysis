@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import inv
 from data_preparation import *
 from recommender import SVD_recommender
+from multiprocessing import Pool
 
 
 def lsq(A, b):
@@ -19,11 +20,13 @@ def eval_pred_error(recommender, hole_indices, hole_values):
         p,q = hole_indices[i]
         pred = np.dot(recommender.UserFeature[p].T , recommender.ItemFeature[q])
         pred_error2 += (hole_values[i] -pred)**2
-    pred_error = np.sqrt(pred_error2/num_samples)
+    pred_error = np.sqrt(pred_error2/(num_samples-1))
     return pred_error
 
 
-def dig_hole_evaluation(feature_num = 20, step_num = 10, rate = 0.001, num_samples = 100, file_name = "user_game30k"):
+def dig_hole_evaluation(feature_num = 20, step_num = 10, rate = 0.001, num_samples = 100, regu = 0.01, file_name = "user_game30k", seed = None):
+    if seed is not None:
+        np.random.seed(seed)
     generator = user_game_matrix(file_name)
     generator.played_required = True
     generator.thres_game = 20
@@ -42,22 +45,47 @@ def dig_hole_evaluation(feature_num = 20, step_num = 10, rate = 0.001, num_sampl
         mat[index] = 0. # set to 0, delete it from the sparse mat so that it will be fitted)
 
     # run optimization (see recommender.optimize)
-    recommender = SVD_recommender(mat, feature_num)
+    recommender = SVD_recommender(mat, feature_num, regu)
     learn_procress = [np.inf]*5 # inf just for compare, will be deleted at the end
     eval_process = []
     row_indices, col_indices = recommender.mat.nonzero()
     for i in range(step_num):
         rmse = recommender.svd_step(rate, row_indices, col_indices)
         pred_error = eval_pred_error(recommender, hole_indices, hole_values)
-        print("rmse =", rmse, "Eval =", pred_error)
+        # print("rmse =", rmse, "Eval =", pred_error)
         learn_procress.append(rmse)
         eval_process.append(pred_error)
         if rmse > learn_procress[-5]:
             break
     return recommender.UserFeature, recommender.ItemFeature, learn_procress[5:], eval_process
 
-UserFeature, ItemFeature, learn_procress, eval_process = dig_hole_evaluation(feature_num = 20, step_num = 100, rate = 0.001, num_samples = 100, file_name = "user_game100k")
-plt.plot(learn_procress, label = "learn")
-plt.plot(eval_process, label = "eval")
-plt.show()
-plt.legend()
+
+def test_process(regu):
+    return dig_hole_evaluation(feature_num = 20, step_num = 400, rate = 0.001, num_samples = 100, regu = regu, file_name = "user_game30k", seed = 0)
+
+
+if __name__ =="__main__":
+    fig1 = plt.figure()
+    ax1 = fig1.subplots()
+    fig2 = plt.figure()
+    ax2 = fig2.subplots()
+
+    regu_list = np.linspace(0.01,0.05, 5)
+    with Pool(len(regu_list)) as p:
+        result = p.map(test_process, regu_list)
+
+    for i in range(len(regu_list)):
+        learn_procress = result[i][2]
+        eval_process = result[i][3]
+        ax1.plot(learn_procress, label = "regu {}".format(regu_list[i]))
+        ax2.plot(eval_process, label = "regu {}".format(regu_list[i]))
+
+    ax1.set_xlabel("step")
+    ax2.set_xlabel("step")
+    ax1.set_ylabel("rmse")
+    ax2.set_ylabel("prediction error")
+    ax1.legend()
+    ax2.legend()
+    ax1.set_title("rmse as function of the step number for different regu")
+    ax2.set_title("Evaluation as function of the step number for different regu")
+    plt.show()
