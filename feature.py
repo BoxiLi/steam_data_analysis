@@ -66,7 +66,7 @@ def test_process(Feature):
     generator.thres_user = 20
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()
-    return SVD(mat, feature = Feature, step = 10, Rate = 0.001)
+    return SVD(mat, feature = Feature, step = 500, Rate = 0.001)
 
 
 if __name__ == "__main__":
