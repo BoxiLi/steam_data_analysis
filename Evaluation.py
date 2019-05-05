@@ -230,13 +230,19 @@ def evaluation(itemfeature, library, Userdata, index, n = 20, feature1 = 20, rat
     userfeature = a[0]
     print(len(userfeature))
     Rmse = 0
+    predict = []
+    real = []
     for i in range(n):
         for j in range(len(Userdata)):
+            predict.append(np.dot(userfeature[j], np.matrix(itemfeature[index[j][i]]).T)[0,0])
+            real.append(Userdata[j][index[j][i]][1])
             error = np.dot(userfeature[j], np.matrix(itemfeature[index[j][i]]).T) - Userdata[j][index[j][i]][1]
             Rmse = Rmse + pow(error[0,0]/np.sqrt(n*len(Userdata)), 2)
+    #print(type(predict), real[2:10])
+    corr = np.corrcoef(predict, real)
     rmse = np.sqrt(Rmse)
-    print(rmse)
-    return rmse, rmse_for_learn
+    print("rmse = ", rmse, "corr = ", corr)
+    return rmse, rmse_for_learn, corr
 # end of evaluation part
 
 
@@ -276,10 +282,10 @@ def SVD_2(mat, game_list, user, user_index, feature = 20, step = 1000, Rate = 0.
        #type0 for the whole data set, type1 for new userdata.                     
         Rmse = np.sqrt(rmse)
         print("Rmse = ", Rmse, "ARmse = ", ARmse)
-        L[0].append(x+i*lr)
-        L[1].append(Rmse)
+        L[0].append(Rmse)
         #
         result = evaluation(ItemFeature, game_list, user, user_index, feature1 = feature)
+        L[1].append(result[2][0][1])
         rmse_for_eva.append(result[0]) #Calculate error for one step
         rmse_for_learn.append(result[1])
         #
@@ -321,6 +327,7 @@ def main(type = 0, Feature = 20, Step = 300, rate = 0.001, user_number = 5):
     elif type == 1:
         rmse_for_feature = SVD(mat, feature = Feature, Rate = rate) # records of errors for different feature number
         return rmse_for_feature
+    csvFile.close()
     x=[i for i in range(len(rmse_for_eva[4]))]
     plt.plot(x, rmse_for_eva[4])
     plt.show()
