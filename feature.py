@@ -55,7 +55,7 @@ def SVD(mat, feature = 20, step = 300, Rate = 0.0001, Type = 0, ItemFeature = [0
     #Result = np.dot(UserFeature, ItemFeature.T)
     return UserFeature, ItemFeature, LearningProcess,  ARmse
 
-def main(type = 0, Feature = 20, Step = 300, rate = 0.001, user_number = 5):
+def main(Feature = 19, Step = 300, rate = 0.001):
     file_name = "user_game30k"
     file_name2 = "user_game300k"  # providing data for evaluating
     generator = user_game_matrix(file_name)
@@ -66,7 +66,7 @@ def main(type = 0, Feature = 20, Step = 300, rate = 0.001, user_number = 5):
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()  
 
-    result = SVD(mat, feature = 19)
+    result = SVD(mat, feature = Feature, step = Step, Rate = rate)
     rmse = result[2][1]
     csvFile = open("data1.csv", "w")
     writer = csv.writer(csvFile)
