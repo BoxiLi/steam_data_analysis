@@ -71,3 +71,4 @@ def main(Feature = 19, Step = 300, rate = 0.001):
     csvFile = open("data1.csv", "w")
     writer = csv.writer(csvFile)
     writer.writerow(rmse)
+    csvFile.close()
