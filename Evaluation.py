@@ -286,6 +286,7 @@ def SVD_2(mat, game_list, user, user_index, feature = 20, step = 1000, Rate = 0.
         #
         result = evaluation(ItemFeature, game_list, user, user_index, feature1 = feature)
         L[1].append(result[2][0][1])
+        print(L[1])
         rmse_for_eva.append(result[0]) #Calculate error for one step
         rmse_for_learn.append(result[1])
         #
