@@ -11,8 +11,11 @@ class SVD_recommender(object):
     def __init__(self, mat, feature_num = 20, regu = 0.01):
         self.feature_num = feature_num
         # initialize U and I with an appropriate normalization
-        self.UserFeature = np.random.rand(mat.shape[0], feature_num)*np.sqrt(2./feature_num)
-        self.ItemFeature = np.random.rand(mat.shape[1], feature_num)*np.sqrt(2./feature_num)
+        self.UserFeature = np.random.rand(mat.shape[0], feature_num)*np.sqrt(2./feature_num)/10.
+        self.ItemFeature = np.random.rand(mat.shape[1], feature_num)*np.sqrt(2./feature_num)/10.
+        self.mu = np.mean(mat)
+        self.UserUncertain = np.random.rand(mat.shape[0])*np.sqrt(2./feature_num)/10.
+        self.ItemUncertain = np.random.rand(mat.shape[1])*np.sqrt(2./feature_num)/10.
         self.mat = mat
         self.useful_entry_number = mat.count_nonzero()
         self.regu = regu
@@ -31,10 +34,12 @@ class SVD_recommender(object):
         for entry_iter in range(self.useful_entry_number):
             p = row_indices[entry_iter]
             q = col_indices[entry_iter]
-            pred = np.dot(self.UserFeature[p].T, self.ItemFeature[q])
+            pred = self.mu + self.UserUncertain[p] + self.ItemUncertain[q] + np.dot(self.UserFeature[p].T, self.ItemFeature[q])
             error = self.mat[p,q] - pred
             rmse2 = rmse2 + pow(error, 2)/self.useful_entry_number
-             
+            
+            self.UserUncertain[p] = self.UserUncertain[p] + rate * (error - self.regu * self.UserUncertain[p])
+            self.ItemUncertain[q] = self. ItemUncertain[q] + rate * (error - self.regu * self.ItemUncertain[q])
             self.UserFeature[p] = self.UserFeature[p] + rate * (error * self.ItemFeature[q] - self.regu * self.UserFeature[p])
             self.ItemFeature[q] = self.ItemFeature[q] + rate * (error * self.UserFeature[p] - self.regu * self.ItemFeature[q])
         rmse = np.sqrt(rmse2)
@@ -57,6 +62,19 @@ class SVD_recommender(object):
                 break
         return self.UserFeature, self.ItemFeature, learn_procress[5:]
 
+    
+    def dig_hole(self, num_samples):
+        # dig holes, pick random coordinates in mat and set them to 0
+        row_indices, col_indices = self.mat.nonzero()
+        num_total_entries = len(row_indices)
+
+        pointers = np.random.choice(range(num_total_entries), num_samples, replace=False) # replace = False, no repetition
+        hole_indices = list(zip(row_indices[pointers], col_indices[pointers])) # create coordiante pairs [(r1,c1),(r2,c2)...]
+        hole_values = [mat[index] for index in hole_indices] # record existing mat entries
+        for index in hole_indices:
+            mat[index] = 0. # set to 0, delete it from the sparse mat so that it will be fitted)
+        return {hole_indices[i]:hole_values[i] for i in range(num_samples)}
+
 
 if __name__ == "__main__":
     file_name = "user_game30k"
@@ -67,4 +85,4 @@ if __name__ == "__main__":
     generator.normalize_func = tanh_normalize
     mat, user_list, game_list = generator.construct()
     recommender = SVD_recommender(mat, feature_num = 20, regu = 0.01) 
-    UserFeature, ItemFeature, learn_procress = recommender.optimize(step_num = 1000, rate = 0.01)
+    UserFeature, ItemFeature, learn_procress = recommender.optimize(step_num = 13, rate = 0.01)
